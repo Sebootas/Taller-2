@@ -9,6 +9,7 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.location.Address
 import android.location.Geocoder
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
@@ -64,7 +65,7 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
             override fun onSensorChanged(event: SensorEvent) {
                 if (mMap != null) {
-                    if (event.values[0] < 20) {
+                    if (event.values[0] < 30) {
                         Log.i("MAPS", "DARK MAP " + event.values[0])
                         mMap!!.setMapStyle(
                             MapStyleOptions.loadRawResourceStyle(
@@ -86,10 +87,6 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
             override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {}
         }
-
-
-
-
 
 
         super.onCreate(savedInstanceState)
@@ -214,6 +211,26 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
 
         //mMap!!.clear()
+
+
+        mMap!!.setOnMapLongClickListener { latLng ->
+            // Reverse geocode the latitude and longitude to get the actual address
+            val geocoder = Geocoder(this)
+            val addresses: MutableList<Address>? = geocoder.getFromLocation(latLng.latitude, latLng.longitude, 1)
+            val address = addresses?.get(0)?.getAddressLine(0)
+            val placeName = addresses?.get(0)?.featureName // Get the name of the place
+
+            // Add a new marker at the long-pressed position with the name of the place
+            mMap!!.addMarker(
+                MarkerOptions()
+                    .position(latLng)
+                    .title(placeName) // Use the name of the place as the marker title
+                    .snippet(address)
+            )
+
+            // Show a toast with the actual address
+            Toast.makeText(this, "New marker added at: $placeName", Toast.LENGTH_SHORT).show()
+        }
 
     }
 
