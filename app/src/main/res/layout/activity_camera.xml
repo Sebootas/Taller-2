@@ -27,15 +27,33 @@
         android:layout_marginTop="24dp"
         android:layout_marginBottom="32dp" />
 
-    <Button
-        android:id="@+id/btnGallery"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Go to gallery"
-        android:textColor="@android:color/black"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginTop="32dp"/>
+        android:orientation="horizontal"
+        android:gravity="center_horizontal">
+
+        <Button
+            android:id="@+id/btnGallery"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Go to gallery"
+            android:textColor="@android:color/black"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:layout_marginTop="32dp"/>
+
+        <Button
+            android:id="@+id/anotherButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Another Button"
+            android:textColor="@android:color/black"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:layout_marginTop="32dp"
+            android:layout_marginStart="16dp"/>
+
+    </LinearLayout>
 
 </LinearLayout>
