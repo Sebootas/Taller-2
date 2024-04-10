@@ -25,6 +25,10 @@ class CameraActivity : AppCompatActivity() {
         private const val CAMERA_PERMISSION_CODE = 1
         private const val PERMISSION_REQUEST_CAMERA = 2
         private const val PERMISSION_REQUEST_GALLERY = 3
+
+        fun resizeBitmap(bitmap: Bitmap, newWidth: Int, newHeight: Int): Bitmap {
+            return Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, true)
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -34,7 +38,6 @@ class CameraActivity : AppCompatActivity() {
         btn_camera = findViewById(R.id.btn_camera)
         ivImage = findViewById(R.id.iv_image)
         galleryButton = findViewById(R.id.btnGallery)
-        ivImage.setImageResource(R.drawable.camera)
 
         btn_camera.setOnClickListener {
 
@@ -83,9 +86,11 @@ class CameraActivity : AppCompatActivity() {
         if (resultCode == Activity.RESULT_OK) {
             if (requestCode == PERMISSION_REQUEST_CAMERA) {
                 val imageBitmap = data?.extras?.get("data") as? Bitmap
-                ivImage.setImageBitmap(imageBitmap)
+                // Resize the bitmap to 3000x4000
+                val resizedBitmap = resizeBitmap(imageBitmap!!, 3000, 4000)
+                ivImage.setImageBitmap(resizedBitmap)
                 // Save the captured image to the gallery
-                saveImageToGallery(imageBitmap)
+                saveImageToGallery(resizedBitmap)
             } else if (requestCode == PERMISSION_REQUEST_GALLERY) {
                 val selectedImageUri = data?.data
                 ivImage.setImageURI(selectedImageUri)
@@ -107,4 +112,3 @@ class CameraActivity : AppCompatActivity() {
         }
     }
 }
-
