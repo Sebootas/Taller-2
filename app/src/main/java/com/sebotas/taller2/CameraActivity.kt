@@ -34,6 +34,7 @@ class CameraActivity : AppCompatActivity() {
         btn_camera = findViewById(R.id.btn_camera)
         ivImage = findViewById(R.id.iv_image)
         galleryButton = findViewById(R.id.btnGallery)
+        ivImage.setImageResource(R.drawable.camera)
 
         btn_camera.setOnClickListener {
 
