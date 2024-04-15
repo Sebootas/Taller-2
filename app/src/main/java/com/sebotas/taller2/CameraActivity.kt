@@ -25,10 +25,6 @@ class CameraActivity : AppCompatActivity() {
         private const val CAMERA_PERMISSION_CODE = 1
         private const val PERMISSION_REQUEST_CAMERA = 2
         private const val PERMISSION_REQUEST_GALLERY = 3
-
-        fun resizeBitmap(bitmap: Bitmap, newWidth: Int, newHeight: Int): Bitmap {
-            return Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, true)
-        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -38,6 +34,7 @@ class CameraActivity : AppCompatActivity() {
         btn_camera = findViewById(R.id.btn_camera)
         ivImage = findViewById(R.id.iv_image)
         galleryButton = findViewById(R.id.btnGallery)
+        ivImage.setImageResource(R.drawable.camera)
 
         btn_camera.setOnClickListener {
 
@@ -86,17 +83,33 @@ class CameraActivity : AppCompatActivity() {
         if (resultCode == Activity.RESULT_OK) {
             if (requestCode == PERMISSION_REQUEST_CAMERA) {
                 val imageBitmap = data?.extras?.get("data") as? Bitmap
-                // Resize the bitmap to 3000x4000
-                val resizedBitmap = resizeBitmap(imageBitmap!!, 3000, 4000)
-                ivImage.setImageBitmap(resizedBitmap)
-                // Save the captured image to the gallery
-                saveImageToGallery(resizedBitmap)
+                val scaledBitmap = imageBitmap?.let { scaleBitmap(it, 3000, 4000) }
+                scaledBitmap?.let {
+                    val resolution = "${it.width}x${it.height}"
+                    Toast.makeText(this, "Image resolution: $resolution", Toast.LENGTH_SHORT).show()
+                    ivImage.setImageBitmap(it)
+                    saveImageToGallery(it)
+                }
             } else if (requestCode == PERMISSION_REQUEST_GALLERY) {
                 val selectedImageUri = data?.data
                 ivImage.setImageURI(selectedImageUri)
             }
         }
     }
+
+    private fun scaleBitmap(bitmap: Bitmap, maxWidth: Int, maxHeight: Int): Bitmap {
+        val width = bitmap.width
+        val height = bitmap.height
+
+        val scaleWidth = maxWidth.toFloat() / width
+        val scaleHeight = maxHeight.toFloat() / height
+
+        val matrix = android.graphics.Matrix()
+        matrix.postScale(scaleWidth, scaleHeight)
+
+        return Bitmap.createBitmap(bitmap, 0, 0, width, height, matrix, true)
+    }
+
 
     private fun saveImageToGallery(bitmap: Bitmap?) {
         bitmap?.let {
@@ -111,4 +124,7 @@ class CameraActivity : AppCompatActivity() {
             Toast.makeText(this, "Failed to save image", Toast.LENGTH_SHORT).show()
         }
     }
+
+
 }
+

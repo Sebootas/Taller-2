@@ -2,6 +2,7 @@ package com.sebotas.taller2
 
 
 import android.content.Context
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.Drawable
@@ -13,6 +14,8 @@ import android.location.Address
 import android.location.Geocoder
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.inputmethod.EditorInfo
 import android.widget.EditText
@@ -30,12 +33,31 @@ import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.android.gms.maps.model.MarkerOptions
 import com.sebotas.taller2.databinding.ActivityMapsBinding
 import java.io.IOException
+import android.Manifest
+import android.location.Location
+import android.location.LocationManager
+import androidx.core.app.ActivityCompat
+
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
+import com.google.gson.Gson
+import com.sebotas.taller2.LocationData
+import java.io.File
+import java.util.Calendar
+
 
 class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private lateinit var mSensorManager: SensorManager
     private lateinit var mLightSensor: Sensor
     private lateinit var mLightSensorEventListener: SensorEventListener
+
+    /* Agregado */
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
+    private val handler = Handler(Looper.getMainLooper())
+    private val LOCATION_PERMISSION_REQUEST_CODE = 1001
+    private var lastLocationData: LocationData? = null
+    /* Fin agregado */
 
     private var mMap: GoogleMap? = null
     private lateinit var binding: ActivityMapsBinding
@@ -53,13 +75,28 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         mSensorManager.unregisterListener(mLightSensorEventListener)
     }
 
-
     override fun onCreate(savedInstanceState: Bundle?) {
 
-        mSensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        mSensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
         mLightSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_LIGHT)!!
 
+        /* Inicio agregado */
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
+        // Verifica si tienes permiso para acceder a la ubicación
+        if (ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            // Si no tienes permiso, solicítalo al usuario
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+                LOCATION_PERMISSION_REQUEST_CODE
+            )
+        }
+        /* Fin agregado */
 
         mLightSensorEventListener = object : SensorEventListener {
 
@@ -116,9 +153,6 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
 
         val editText = findViewById<EditText>(R.id.editTextText)
 
-
-
-
         binding.editTextText.setOnEditorActionListener { v, actionId, event ->
             if (actionId == EditorInfo.IME_ACTION_SEND) {
                 //Cuando se realice la busqueda
@@ -136,18 +170,18 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
                                 mMap!!.moveCamera(CameraUpdateFactory.newLatLng(position))
                                 mMap!!.addMarker(
                                     MarkerOptions().position(position)
-                                        .title("GEO")
-                                        .snippet("Algo")
+                                        .title("GEO-pocision")
+                                        .snippet("Pocision obtenida de la busqueda")
                                 )
 
 
                             } else {
-                                Toast.makeText(this, "Dirección no encontrada", Toast.LENGTH_SHORT)
-                                    .show()
+                                Toast.makeText(this, "Dirección no encontrada", Toast.LENGTH_SHORT).show()
                             }
                         }
                     } catch (e: IOException) {
                         e.printStackTrace()
+                        Log.e("MAP_ACTIVITY", "Error en la pocision por GEO. ${e.message}")
                     }
                 } else {
                     Toast.makeText(this, "La dirección está vacía", Toast.LENGTH_SHORT).show()
@@ -160,55 +194,9 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
             }
         }
 
-
-
-
-
-
-
-
-
         mMap = googleMap
 
         mMap!!.setMapStyle(MapStyleOptions.loadRawResourceStyle(this, R.raw.map_style_night))
-
-        // Add a marker in Sydney and move the camera
-        val toros = LatLng(5.063903320621079, -75.5249597207237)
-        val cable = LatLng(5.056142045411864, -75.48627524765217)
-        val palogrande = LatLng(5.056989091540201, -75.49003727437554)
-        val mom = LatLng(5.044162401761589, -75.47793600361102)
-        val dad = LatLng(5.02788376862441, -75.59534740676227)
-
-
-        mMap!!.addMarker(
-            MarkerOptions().position(toros).title("Ole")
-                .snippet("Manizales").alpha(1F)
-        )
-
-
-        mMap!!.addMarker(
-            MarkerOptions().position(cable).title("Torre del Cable")
-                .snippet("Manizales").alpha(1F)
-        )
-
-
-        mMap!!.addMarker(
-            MarkerOptions().position(palogrande).title("Palogrande")
-                .snippet("Once Caldas Campeon de America 2004").alpha(1F)
-                .icon(bitmapDescriptorFromVector(this, R.drawable.baseline_1k_24))
-        )
-
-
-        mMap!!.addMarker(
-            MarkerOptions().position(mom).title("Mom")
-                .snippet("Manizales").alpha(1F)
-        )
-
-        mMap!!.addMarker(
-            MarkerOptions().position(dad).title("Dad")
-                .snippet("Manizales").alpha(1F)
-        )
-
 
         //mMap!!.clear()
 
@@ -229,8 +217,20 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
             )
 
             // Show a toast with the actual address
-            Toast.makeText(this, "New marker added at: $placeName", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Nuevo marcador colocado en: $placeName", Toast.LENGTH_SHORT).show()
+
+            val distancia = calculateDistance(
+                lastLocationData!!.latitud,
+                lastLocationData!!.longitud,
+                latLng.latitude,
+                latLng.longitude
+            )
+            Toast.makeText(this@MapsActivity, "Distancia entre puntos: ${distancia}", Toast.LENGTH_SHORT).show()
         }
+
+        requestLocationUpdates() // <- ejecucion por primera vez de la logica que verificara la pocision guardada con la actual
+        // Programa la ejecución periódica cada 10 segundos
+        handler.postDelayed(runnable, 10000) // 10000 milisegundos = 10 segundos
 
     }
 
@@ -254,4 +254,145 @@ class MapsActivity : AppCompatActivity(), OnMapReadyCallback {
         vectorDrawable.draw(canvas)
         return BitmapDescriptorFactory.fromBitmap(bitmap)
     }
+
+    /**
+     * Función que se encarga de guardar la pocision
+     */
+    private fun savePositionTask(locationData: LocationData){
+        // Verifica si tienes permiso para acceder a la ubicación
+        if (ContextCompat.checkSelfPermission(
+                this@MapsActivity,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            // Si tienes permiso, obtén la ubicación actual
+            fusedLocationClient.lastLocation
+                .addOnSuccessListener { location ->
+
+                    try{
+
+                        // Guarda en json de manera local las coordenadas.
+                        // Convertir el objeto de ubicación a JSON
+                        val gson = Gson()
+                        val locationJson = gson.toJson(locationData)
+
+                        // Guardar el JSON en un archivo local
+                        val fileName = "location.json"
+                        val file = File(this@MapsActivity.filesDir, fileName)
+                        file.writeText(locationJson)
+
+                        Toast.makeText(this@MapsActivity,"Datos de ubicación guardados.",Toast.LENGTH_SHORT).show()
+                        Log.d("FileSave", "Location data saved successfully to location.json")
+                        Log.d("FilePath", "File path: ${file.absolutePath}")
+
+                    }catch (e: Exception){
+                        Toast.makeText(this@MapsActivity,"Error al guardar pocision en JSON.${e.message}",Toast.LENGTH_SHORT).show()
+                        Log.e("MAP_ACTIVITY", "Error en el guardado de la pocision JSON: ${e.message}")
+                        Log.e("FileSave", "Error saving location data: ${e.message}")
+
+                    }
+                }
+                .addOnFailureListener { e ->
+                    // Maneja cualquier error al obtener la ubicación
+                    Toast.makeText(
+                        this@MapsActivity,
+                        "Error al obtener la ubicación: ${e.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    Log.e("MAP_ACTIVITY", "Error al obtener la ubicacion: ${e.message}")
+                }
+        }
+    }
+
+    /**
+     * Función que se encarga de cargar la pocisión.
+     */
+    private fun loadPositionTask(){
+        try{
+            val fileName = "location.json"
+            val file = File(this@MapsActivity .filesDir, fileName)
+
+            // Leer el contenido del archivo JSON
+            val locationJson = file.readText()
+
+            // Convertir JSON a objeto de ubicación
+            val gson = Gson()
+
+            val location = gson.fromJson(locationJson, LocationData::class.java)
+            val latLong = LatLng(location.latitud, location.longitud)
+
+            mMap!!.moveCamera(CameraUpdateFactory.zoomTo(17F))
+            mMap!!.moveCamera(CameraUpdateFactory.newLatLng(latLong))
+            mMap!!.addMarker(
+                MarkerOptions().position(latLong)
+                    .title("Ubicacion cargada")
+                    .snippet("Ultima pocision registrada")
+            )
+        }catch(e: Exception){
+            Toast.makeText(this@MapsActivity, "Error al cargar pocision desde JSON.${e.message}", Toast.LENGTH_SHORT).show()
+            Log.e("MAP_ACTIVITY", "Error en la carga de la pocision JSON: ${e.message}")
+        }
+    }
+
+    private fun requestLocationUpdates() {
+
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return
+        }
+        fusedLocationClient.lastLocation
+            .addOnSuccessListener { location ->
+                location?.let {
+                    val newLocationData = LocationData(it.latitude, it.longitude, Calendar.getInstance().toString())
+                    if (lastLocationData == null || isLocationChangeSignificant(lastLocationData!!, newLocationData)) {
+                        lastLocationData = newLocationData
+                        savePositionTask(newLocationData)
+                        loadPositionTask()
+                    }
+                }
+            }
+    }
+
+    private fun isLocationChangeSignificant(oldLocation: LocationData, newLocation: LocationData): Boolean {
+        val distanceChange = calculateDistance(oldLocation.latitud, oldLocation.longitud, newLocation.latitud, newLocation.longitud)
+        return distanceChange >= 30 // 30 meters threshold for significant change
+    }
+
+    private fun calculateDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Float {
+        val results = FloatArray(1)
+        android.location.Location.distanceBetween(lat1, lon1, lat2, lon2, results)
+        return results[0]
+    }
+
+    private val runnable: Runnable = object : Runnable {
+        override fun run() {
+            // Llama a tu función cada vez que se ejecute el Runnable
+            requestLocationUpdates()
+
+            // Vuelve a programar la ejecución del Runnable después de 10 segundos
+            handler.postDelayed(this, 10000) // 10000 milisegundos = 10 segundos
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // Detén la ejecución periódica cuando la actividad se destruya
+        handler.removeCallbacks(runnable)
+    }
+
+
+
 }

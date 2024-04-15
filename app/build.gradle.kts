@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.jetbrainsKotlinAndroid)
     alias(libs.plugins.googleAndroidLibrariesMapsplatformSecretsGradlePlugin)
 }
+val MAPS_API_KEY by extra("AIzaSyCyiM7CXdEYENTNgEFim9BOEgKOTSvD-YQ")
 
 android {
     namespace = "com.sebotas.taller2"
@@ -42,6 +43,7 @@ android {
 dependencies {
 
     implementation ("com.github.bumptech.glide:glide:4.12.0")
+    implementation("com.google.android.gms:play-services-location:21.2.0")
     annotationProcessor ("com.github.bumptech.glide:compiler:4.12.0")
 
     implementation ("com.google.code.gson:gson:2.8.8")
@@ -75,6 +77,11 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+
+
+    implementation ("com.github.bumptech.glide:glide:4.12.0")
+    annotationProcessor ("com.github.bumptech.glide:compiler:4.12.0")
+
 
 
     implementation ("androidx.camera:camera-camera2:1.1.0")
